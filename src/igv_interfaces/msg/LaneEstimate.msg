@@ -1,0 +1,8 @@
+std_msgs/Header header
+bool valid
+float32 confidence
+float32 lateral_error_m
+float32 heading_error_rad
+float32 lane_width_m
+bool stop_bar_detected
+float32 stop_bar_distance_m

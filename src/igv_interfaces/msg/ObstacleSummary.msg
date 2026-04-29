@@ -1,0 +1,7 @@
+std_msgs/Header header
+bool obstacle_ahead
+float32 nearest_obstacle_distance_m
+float32 nearest_obstacle_bearing_rad
+bool lane_blocked
+bool left_lane_open
+bool right_lane_open
