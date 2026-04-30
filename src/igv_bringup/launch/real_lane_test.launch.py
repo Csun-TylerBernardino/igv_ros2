@@ -67,7 +67,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    obstacle_detector_node = Node(
+    obstacle_detector_node = Node(     #Obstacle Detector Square
         package='igv_perception',
         executable='obstacle_detector_node',
         name='obstacle_detector_node',
@@ -80,6 +80,23 @@ def generate_launch_description():
             'min_z': 0.12,
             'max_z': 0.75,
             'min_points': 50,
+        }]
+    )
+
+    cloud_debug_filter_node = Node(     #Thresholding
+        package='igv_perception',
+        executable='cloud_debug_filter_node',
+        name='cloud_debug_filter_node',
+        output='screen',
+        parameters=[{
+            'target_frame': 'base_link',
+            'min_z': 0.1397,
+            'max_z': 1.4,
+            'max_range_m': 6.096,
+            'sample_step': 3,
+            'fov_ground_z': 0.02,
+	    'fov_max_range_m': 6.50,
+	    'fov_top_crop_ratio': 0.00,   #Angled crop
         }]
     )
 
@@ -105,5 +122,6 @@ def generate_launch_description():
         cmd_vel_manager,
         segformer_lane_node,
         obstacle_detector_node,
+	cloud_debug_filter_node,
         rviz
     ])

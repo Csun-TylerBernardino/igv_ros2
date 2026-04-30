@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             'segformer_lane_node = igv_perception.segformer_lane_node:main',
             'obstacle_detector_node = igv_perception.obstacle_detector_node:main',
+	    'cloud_debug_filter_node = igv_perception.cloud_debug_filter_node:main',
         ],
     },
 )

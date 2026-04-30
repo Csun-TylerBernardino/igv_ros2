@@ -46,7 +46,7 @@
   <joint name="base_to_zed" type="fixed">
     <parent link="base_link"/>
     <child link="zed_camera_link"/>
-    <origin xyz="0.20 0.0 0.9144" rpy="0 0.506145 0"/>
-  </joint>
+    <origin xyz="0.20 0.0 0.9144" rpy="0 0.523599 0"/>
+0.506145  </joint>
 
 </robot>
