@@ -28,11 +28,6 @@ ROI_TOP_RATIO = 0.35
 TRUE_CLOUD_SAMPLE_STEP = 8
 TRUE_CLOUD_MAX_RANGE_M = 20.0
 
-MIN_LANE_PIXELS = 600
-MIN_LANE_CONF = 0.05
-MIN_ROW_COVERAGE = 30
-EMA_ALPHA = 0.20
-
 
 def build_model(model_path):
     config = SegformerConfig(
@@ -127,7 +122,7 @@ def overlay_mask(frame_bgr, mask):
     return cv2.addWeighted(frame_bgr, 0.35, color_mask, 1.0, 0)
 
 
-def compute_lane_features(mask, lane_prob):
+def compute_lane_estimate(mask, lane_prob):
     h, w = mask.shape[:2]
 
     y0 = int(h * 0.60)
@@ -135,19 +130,18 @@ def compute_lane_features(mask, lane_prob):
     roi_prob = lane_prob[y0:, :]
 
     ys, xs = np.where(roi_mask > 0)
-    pixel_count = int(len(xs))
-    row_coverage = int(len(np.unique(ys))) if pixel_count > 0 else 0
 
-    if pixel_count == 0:
-        return False, 0.0, 0.0, 0.0, 3.0, pixel_count, row_coverage, None
+    if len(xs) < 200:
+        return False, 0.0, 0.0, 0.0, 3.0
 
     lane_center_x = float(np.mean(xs))
     image_center_x = w / 2.0
     lateral_error_px = image_center_x - lane_center_x
+
     lateral_error_m = (lateral_error_px / (w / 2.0)) * 1.5
 
     heading_error_rad = 0.0
-    if pixel_count > 50:
+    if len(xs) > 50:
         ys_full = ys.astype(np.float32)
         xs_full = xs.astype(np.float32)
         fit = np.polyfit(ys_full, xs_full, 1)
@@ -157,22 +151,7 @@ def compute_lane_features(mask, lane_prob):
     lane_pixels = roi_prob[roi_mask > 0]
     confidence = float(np.clip(np.mean(lane_pixels), 0.0, 1.0)) if lane_pixels.size > 0 else 0.0
 
-    valid = (
-        pixel_count >= MIN_LANE_PIXELS and
-        confidence >= MIN_LANE_CONF and
-        row_coverage >= MIN_ROW_COVERAGE
-    )
-
-    return (
-        valid,
-        confidence,
-        float(lateral_error_m),
-        float(heading_error_rad),
-        3.0,
-        pixel_count,
-        row_coverage,
-        lane_center_x,
-    )
+    return True, confidence, float(lateral_error_m), heading_error_rad, 3.0
 
 
 def find_xyz_offsets(cloud_msg):
@@ -226,10 +205,6 @@ class SegformerLaneNode(Node):
         self.lane_pub = self.create_publisher(LaneEstimate, '/lane_estimate', 10)
         self.lane_cloud_pub = self.create_publisher(PointCloud2, '/lanes/point_cloud', 10)
 
-        self.overlay_pub = self.create_publisher(RosImage, '/debug/lane_overlay', 10)
-        self.mask_pub = self.create_publisher(RosImage, '/debug/lane_mask', 10)
-        self.prob_pub = self.create_publisher(RosImage, '/debug/lane_probability', 10)
-
         package_share = get_package_share_directory('igv_perception')
         model_path = os.path.join(package_share, 'models', 'best_modelV.2.pth')
 
@@ -244,10 +219,6 @@ class SegformerLaneNode(Node):
 
         self.processing = False
         self.frame_count = 0
-
-        self.have_filtered_lane = False
-        self.filtered_lateral_error = 0.0
-        self.filtered_heading_error = 0.0
 
         self.image_sub = self.create_subscription(
             RosImage,
@@ -347,19 +318,6 @@ class SegformerLaneNode(Node):
         lane_cloud_msg = point_cloud2.create_cloud_xyz32(self.latest_cloud.header, points)
         self.lane_cloud_pub.publish(lane_cloud_msg)
 
-    def publish_debug_images(self, header, overlay_img, mask_img, prob_img):
-        overlay_msg = self.bridge.cv2_to_imgmsg(overlay_img, encoding='bgr8')
-        overlay_msg.header = header
-        self.overlay_pub.publish(overlay_msg)
-
-        mask_msg = self.bridge.cv2_to_imgmsg(mask_img, encoding='mono8')
-        mask_msg.header = header
-        self.mask_pub.publish(mask_msg)
-
-        prob_msg = self.bridge.cv2_to_imgmsg(prob_img, encoding='mono8')
-        prob_msg.header = header
-        self.prob_pub.publish(prob_msg)
-
     def image_callback(self, msg):
         if self.processing:
             return
@@ -371,63 +329,17 @@ class SegformerLaneNode(Node):
 
             x, gray, clahe_gray = preprocess_frame(frame_bgr, self.transform)
             mask, lane_prob = predict_mask(self.model, x, h, w)
-
-            (
-                valid,
-                confidence,
-                raw_lateral_error_m,
-                raw_heading_error_rad,
-                lane_width_m,
-                pixel_count,
-                row_coverage,
-                lane_center_x,
-            ) = compute_lane_features(mask, lane_prob)
-
-            if valid:
-                if not self.have_filtered_lane:
-                    self.filtered_lateral_error = raw_lateral_error_m
-                    self.filtered_heading_error = raw_heading_error_rad
-                    self.have_filtered_lane = True
-                else:
-                    self.filtered_lateral_error = (
-                        (1.0 - EMA_ALPHA) * self.filtered_lateral_error
-                        + EMA_ALPHA * raw_lateral_error_m
-                    )
-                    self.filtered_heading_error = (
-                        (1.0 - EMA_ALPHA) * self.filtered_heading_error
-                        + EMA_ALPHA * raw_heading_error_rad
-                    )
-            else:
-                self.have_filtered_lane = False
-                self.filtered_lateral_error = 0.0
-                self.filtered_heading_error = 0.0
-
             vis = overlay_mask(frame_bgr, mask)
 
-            image_center_x = w // 2
-            cv2.line(vis, (image_center_x, 0), (image_center_x, h - 1), (0, 255, 0), 2)
-
-            if lane_center_x is not None:
-                lane_center_px = int(round(lane_center_x))
-                cv2.line(vis, (lane_center_px, int(h * 0.60)), (lane_center_px, h - 1), (0, 255, 255), 2)
-
-            status_text = 'VALID' if valid else 'INVALID'
-            color = (0, 255, 0) if valid else (0, 0, 255)
-
-            cv2.putText(vis, f'Status: {status_text}', (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-            cv2.putText(vis, f'Conf: {confidence:.3f}', (15, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            cv2.putText(vis, f'Pixels: {pixel_count}', (15, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            cv2.putText(vis, f'Rows: {row_coverage}', (15, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            cv2.putText(vis, f'Lat: {self.filtered_lateral_error:.3f} m', (15, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            cv2.putText(vis, f'Hdg: {self.filtered_heading_error:.3f} rad', (15, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            valid, confidence, lateral_error_m, heading_error_rad, lane_width_m = compute_lane_estimate(mask, lane_prob)
 
             lane_msg = LaneEstimate()
             lane_msg.header.stamp = msg.header.stamp
             lane_msg.header.frame_id = 'base_link'
             lane_msg.valid = valid
             lane_msg.confidence = confidence
-            lane_msg.lateral_error_m = float(self.filtered_lateral_error)
-            lane_msg.heading_error_rad = float(self.filtered_heading_error)
+            lane_msg.lateral_error_m = lateral_error_m
+            lane_msg.heading_error_rad = heading_error_rad
             lane_msg.lane_width_m = lane_width_m
             lane_msg.stop_bar_detected = False
             lane_msg.stop_bar_distance_m = 0.0
@@ -435,27 +347,24 @@ class SegformerLaneNode(Node):
 
             self.publish_lane_cloud(mask)
 
-            prob_vis = np.clip(lane_prob * 255.0, 0, 255).astype(np.uint8)
-            mask_vis = (mask * 255).astype(np.uint8)
-            self.publish_debug_images(msg.header, vis, mask_vis, prob_vis)
-
             self.frame_count += 1
             if self.frame_count % 30 == 0:
+                lane_pixels = int(mask.sum())
                 self.get_logger().info(
-                    f'valid={valid} conf={confidence:.3f} pixels={pixel_count} rows={row_coverage} '
-                    f'lat={self.filtered_lateral_error:.3f} hdg={self.filtered_heading_error:.3f}'
+                    f'lane_pixels={lane_pixels} valid={valid} conf={confidence:.3f} '
+                    f'lat_err={lateral_error_m:.3f} head_err={heading_error_rad:.3f}'
                 )
 
             cv2.imshow("Original Input", frame_bgr)
             cv2.imshow("CLAHE Gray Input", clahe_gray)
             cv2.imshow("Lane Detection", vis)
-            cv2.imshow("Mask", mask_vis)
+            cv2.imshow("Mask", mask * 255)
             cv2.waitKey(1)
 
         except Exception as e:
             self.get_logger().error(f'Lane processing error: {e}')
-        finally:
-            self.processing = False
+
+        self.processing = False
 
 
 def main(args=None):

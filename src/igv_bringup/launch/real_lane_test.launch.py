@@ -50,7 +50,14 @@ def generate_launch_description():
         package='igv_localization',
         executable='odom_stub',
         name='odom_stub',
-        output='screen'
+        output='screen',
+	parameters=[
+	    os.path.join(
+		get_package_share_directory('igv_localization'),
+		'config',
+		'odom_stub.yaml'
+	    )
+	]
     )
 
     cmd_vel_manager = Node(
@@ -73,12 +80,12 @@ def generate_launch_description():
         name='obstacle_detector_node',
         output='screen',
         parameters=[{
-            'min_x': 0.65,
-            'max_x': 1.40,
-            'min_y': -0.30,
-            'max_y': 0.30,
-            'min_z': 0.12,
-            'max_z': 0.75,
+            'min_x': -3.048,
+            'max_x': 3.048,
+            'min_y': -3.048,
+            'max_y': 3.048,
+            'min_z': 0.1524,
+            'max_z': 1.4224,
             'min_points': 50,
         }]
     )
@@ -91,11 +98,11 @@ def generate_launch_description():
         parameters=[{
             'target_frame': 'base_link',
             'min_z': 0.1397,
-            'max_z': 1.4,
-            'max_range_m': 6.096,
+            'max_z': 3.048,
+            'max_range_m': 3.048,
             'sample_step': 3,
             'fov_ground_z': 0.02,
-	    'fov_max_range_m': 6.50,
+	    'fov_max_range_m': 6.0,
 	    'fov_top_crop_ratio': 0.00,   #Angled crop
         }]
     )

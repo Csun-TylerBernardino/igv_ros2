@@ -53,6 +53,7 @@ class BehaviorManager(Node):
 
         self.obstacle_ahead = False
         self.obstacle_distance = 999.0
+        self.latest_obstacle_time_ns = 0
 
         # Controller tuning
         self.filter_alpha = 0.15
@@ -67,7 +68,12 @@ class BehaviorManager(Node):
         self.medium_speed = 0.30
         self.slow_speed = 0.18
 
+        # State timing
         self.lane_timeout_sec = 1.0
+        self.clear_hold_sec = 0.75
+
+        # Search behavior
+        self.search_turn_rate = 0.10
 
         self.get_logger().info('Behavior manager started')
 
@@ -92,6 +98,10 @@ class BehaviorManager(Node):
     def obstacle_callback(self, msg: ObstacleSummary):
         self.obstacle_ahead = msg.obstacle_ahead
         self.obstacle_distance = msg.nearest_obstacle_distance_m
+
+        if self.obstacle_ahead:
+            self.latest_obstacle_time_ns = self.get_clock().now().nanoseconds
+
         self.update_behavior()
 
     def lane_is_fresh(self):
@@ -100,7 +110,14 @@ class BehaviorManager(Node):
         age_sec = (self.get_clock().now().nanoseconds - self.latest_lane_time_ns) / 1e9
         return age_sec <= self.lane_timeout_sec
 
+    def obstacle_recently_seen(self):
+        if self.latest_obstacle_time_ns == 0:
+            return False
+        age_sec = (self.get_clock().now().nanoseconds - self.latest_obstacle_time_ns) / 1e9
+        return age_sec <= self.clear_hold_sec
+
     def update_behavior(self):
+        # 1) Hard obstacle stop
         if self.obstacle_ahead and self.obstacle_distance < 3.0:
             self.state = 'STOP'
             self.reason = 'obstacle_ahead'
@@ -108,14 +125,16 @@ class BehaviorManager(Node):
             self.target_steering_rad = 0.0
             return
 
-        if not self.lane_is_fresh():
-            self.state = 'IDLE'
-            self.reason = 'lane_timeout'
+        # 2) Brief hold after obstacle clears to avoid chatter
+        if self.obstacle_recently_seen():
+            self.state = 'WAIT_FOR_CLEAR'
+            self.reason = 'obstacle_recently_cleared'
             self.target_speed_mps = 0.0
             self.target_steering_rad = 0.0
             return
 
-        if self.latest_lane_valid:
+        # 3) Normal lane following
+        if self.lane_is_fresh() and self.latest_lane_valid:
             lat = apply_deadband(self.filtered_lateral_error, self.lateral_deadband)
             hdg = apply_deadband(self.filtered_heading_error, self.heading_deadband)
 
@@ -134,11 +153,18 @@ class BehaviorManager(Node):
             self.reason = 'valid_lane_detected'
             self.target_speed_mps = speed
             self.target_steering_rad = steering
+            return
+
+        # 4) Lane missing/stale
+        self.state = 'SEARCH_LANE'
+        if not self.lane_is_fresh():
+            self.reason = 'lane_timeout'
         else:
-            self.state = 'IDLE'
             self.reason = 'lane_invalid'
-            self.target_speed_mps = 0.0
-            self.target_steering_rad = 0.0
+
+        # Safe placeholder search behavior
+        self.target_speed_mps = 0.0
+        self.target_steering_rad = self.search_turn_rate
 
     def publish_state(self):
         self.update_behavior()

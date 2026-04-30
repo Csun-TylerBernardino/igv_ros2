@@ -1,0 +1,22 @@
+odom_stub:
+  ros__parameters:
+    odom_frame: odom
+    base_frame: base_link
+    publish_tf: true
+    rate_hz: 20.0
+
+    x: 0.0
+    y: 0.0
+    z: 0.0
+
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+
+    linear_x: 0.0
+    linear_y: 0.0
+    linear_z: 0.0
+
+    angular_x: 0.0
+    angular_y: 0.0
+    angular_z: 0.0
