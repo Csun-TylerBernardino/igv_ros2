@@ -1,0 +1,185 @@
+<?xml version="1.0"?>
+<robot name="robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find differential_drive_robot_description)/urdf/differential_drive_robot.gazebo" />
+  <xacro:include filename="$(find differential_drive_robot_description)/urdf/materials.xacro" />
+  <xacro:include filename="$(find differential_drive_robot_description)/urdf/xacro_variables.xacro" />
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       CHASSIS LINK
+       The chassis link origin is at wheel-axle height (z = 0 of the link).
+       The box visual/collision/inertial is offset upward by chassis_box_z
+       (half the box height) so the bottom face of the chassis sits at z = 0.
+       The two caster spheres share this link and are positioned relative to
+       its origin.
+       NOTE: <surface> / <friction> are Gazebo SDF concepts and must NOT
+       appear inside a URDF <collision> block – they are handled entirely
+       inside differential_drive_robot.gazebo via <gazebo reference="...">.
+  ════════════════════════════════════════════════════════════════════ -->
+  <link name="chassis">
+
+    <inertial>
+      <origin xyz="${chassis_box_x} ${chassis_box_y} ${chassis_box_z}"
+              rpy="${chassis_box_r} ${chassis_box_p} ${chassis_box_ya}"/>
+      <mass value="${chassis_mass}"/>
+      <inertia
+        ixx="${(1.0/12.0)*chassis_mass*(chassis_box_width*chassis_box_width   + chassis_box_height*chassis_box_height)}"
+        ixy="0.0" ixz="0.0"
+        iyy="${(1.0/12.0)*chassis_mass*(chassis_box_length*chassis_box_length + chassis_box_height*chassis_box_height)}"
+        iyz="0.0"
+        izz="${(1.0/12.0)*chassis_mass*(chassis_box_length*chassis_box_length + chassis_box_width*chassis_box_width)}"/>
+    </inertial>
+
+    <!-- Main body box -->
+    <collision name="chassis_collision">
+      <origin xyz="${chassis_box_x} ${chassis_box_y} ${chassis_box_z}"
+              rpy="${chassis_box_r} ${chassis_box_p} ${chassis_box_ya}"/>
+      <geometry>
+        <box size="${chassis_box_length} ${chassis_box_width} ${chassis_box_height}"/>
+      </geometry>
+    </collision>
+
+    <visual name="chassis_visual">
+      <origin xyz="${chassis_box_x} ${chassis_box_y} ${chassis_box_z}"
+              rpy="${chassis_box_r} ${chassis_box_p} ${chassis_box_ya}"/>
+      <geometry>
+        <box size="${chassis_box_length} ${chassis_box_width} ${chassis_box_height}"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+
+    <!-- Front caster sphere (passive, zero-friction set in .gazebo) -->
+    <collision name="caster_front_collision">
+      <origin xyz="${chassis_caster_x} ${chassis_caster_y} ${chassis_caster_z}"
+              rpy="${chassis_caster_r} ${chassis_caster_p} ${chassis_caster_ya}"/>
+      <geometry>
+        <sphere radius="${chassis_caster_radius}"/>
+      </geometry>
+    </collision>
+
+    <visual name="caster_front_visual">
+      <origin xyz="${chassis_caster_x} ${chassis_caster_y} ${chassis_caster_z}"
+              rpy="${chassis_caster_r} ${chassis_caster_p} ${chassis_caster_ya}"/>
+      <geometry>
+        <sphere radius="${chassis_caster_radius}"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+
+    <!-- Rear caster sphere (passive, zero-friction set in .gazebo) -->
+    <collision name="caster_rear_collision">
+      <origin xyz="${chassis_caster2_x} ${chassis_caster2_y} ${chassis_caster2_z}"
+              rpy="${chassis_caster2_r} ${chassis_caster2_p} ${chassis_caster2_ya}"/>
+      <geometry>
+        <sphere radius="${chassis_caster_radius}"/>
+      </geometry>
+    </collision>
+
+    <visual name="caster_rear_visual">
+      <origin xyz="${chassis_caster2_x} ${chassis_caster2_y} ${chassis_caster2_z}"
+              rpy="${chassis_caster2_r} ${chassis_caster2_p} ${chassis_caster2_ya}"/>
+      <geometry>
+        <sphere radius="${chassis_caster_radius}"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       LEFT WHEEL LINK
+  ════════════════════════════════════════════════════════════════════ -->
+  <link name="left_wheel">
+
+    <collision name="left_wheel_collision">
+      <origin xyz="${wheel_x} ${wheel_y} ${wheel_z}"
+              rpy="${wheel_r} ${wheel_p} ${wheel_ya}"/>
+      <geometry>
+        <cylinder radius="${wheel_cylinder_radius}" length="${wheel_cylinder_height}"/>
+      </geometry>
+    </collision>
+
+    <visual name="left_wheel_visual">
+      <origin xyz="${wheel_x} ${wheel_y} ${wheel_z}"
+              rpy="${wheel_r} ${wheel_p} ${wheel_ya}"/>
+      <geometry>
+        <cylinder radius="${wheel_cylinder_radius}" length="${wheel_cylinder_height}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+
+    <inertial>
+      <origin xyz="${wheel_x} ${wheel_y} ${wheel_z}"
+              rpy="${wheel_r} ${wheel_p} ${wheel_ya}"/>
+      <mass value="${wheel_mass}"/>
+      <!-- Solid cylinder inertia tensor -->
+      <inertia
+        ixx="${(1.0/12.0)*wheel_mass*(3.0*wheel_cylinder_radius*wheel_cylinder_radius + wheel_cylinder_height*wheel_cylinder_height)}"
+        ixy="0.0" ixz="0.0"
+        iyy="${(1.0/12.0)*wheel_mass*(3.0*wheel_cylinder_radius*wheel_cylinder_radius + wheel_cylinder_height*wheel_cylinder_height)}"
+        iyz="0.0"
+        izz="${0.5*wheel_mass*wheel_cylinder_radius*wheel_cylinder_radius}"/>
+    </inertial>
+
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       RIGHT WHEEL LINK
+  ════════════════════════════════════════════════════════════════════ -->
+  <link name="right_wheel">
+
+    <collision name="right_wheel_collision">
+      <origin xyz="${wheel_x} ${wheel_y} ${wheel_z}"
+              rpy="${wheel_r} ${wheel_p} ${wheel_ya}"/>
+      <geometry>
+        <cylinder radius="${wheel_cylinder_radius}" length="${wheel_cylinder_height}"/>
+      </geometry>
+    </collision>
+
+    <visual name="right_wheel_visual">
+      <origin xyz="${wheel_x} ${wheel_y} ${wheel_z}"
+              rpy="${wheel_r} ${wheel_p} ${wheel_ya}"/>
+      <geometry>
+        <cylinder radius="${wheel_cylinder_radius}" length="${wheel_cylinder_height}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+
+    <inertial>
+      <origin xyz="${wheel_x} ${wheel_y} ${wheel_z}"
+              rpy="${wheel_r} ${wheel_p} ${wheel_ya}"/>
+      <mass value="${wheel_mass}"/>
+      <inertia
+        ixx="${(1.0/12.0)*wheel_mass*(3.0*wheel_cylinder_radius*wheel_cylinder_radius + wheel_cylinder_height*wheel_cylinder_height)}"
+        ixy="0.0" ixz="0.0"
+        iyy="${(1.0/12.0)*wheel_mass*(3.0*wheel_cylinder_radius*wheel_cylinder_radius + wheel_cylinder_height*wheel_cylinder_height)}"
+        iyz="0.0"
+        izz="${0.5*wheel_mass*wheel_cylinder_radius*wheel_cylinder_radius}"/>
+    </inertial>
+
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       JOINTS
+       Both wheel joints are continuous (no angle limits) and rotate about
+       the Y axis (matching the wheel_p = pi/2 orientation above).
+  ════════════════════════════════════════════════════════════════════ -->
+  <joint type="continuous" name="left_wheel_hinge">
+    <origin xyz="${left_wheel_x} ${left_wheel_y} ${left_wheel_z}" rpy="0 0 0"/>
+    <parent link="chassis"/>
+    <child  link="left_wheel"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="100" velocity="100"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <joint type="continuous" name="right_wheel_hinge">
+    <origin xyz="${right_wheel_x} ${right_wheel_y} ${right_wheel_z}" rpy="0 0 0"/>
+    <parent link="chassis"/>
+    <child  link="right_wheel"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="100" velocity="100"/>
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+</robot>

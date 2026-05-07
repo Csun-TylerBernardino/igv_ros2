@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>differential_drive_robot_control</name>
+  <version>0.0.0</version>
+  <description>
+    Keyboard teleoperation node and launch file for the differential-drive robot.
+  </description>
+
+  <maintainer email="todo@todo.todo">todo</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <!-- python3-pynput is NOT used; teleop.py uses only stdlib termios/tty/select -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

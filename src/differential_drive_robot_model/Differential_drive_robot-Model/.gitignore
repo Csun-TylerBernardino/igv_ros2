@@ -1,0 +1,14 @@
+# Python bytecode
+**/__pycache__/
+*.py[cod]
+*.pyc
+
+# colcon build output
+build/
+install/
+log/
+
+# IDE
+.vscode/
+.idea/
+*.swp

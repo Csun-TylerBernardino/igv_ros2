@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<robot name="robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ───────────────────────── Mass properties ───────────────────────── -->
+  <!-- Reduced from 33 kg / 5 kg to more realistic values for a small robot -->
+  <xacro:property name="chassis_mass" value="5.0" />
+  <xacro:property name="wheel_mass"   value="0.5" />
+
+  <!-- ───────────────────────── Chassis geometry ──────────────────────── -->
+  <!--
+    Previously 1.0 x 1.0 x 1.0 m – far too large.
+    Now 0.4 m long x 0.3 m wide x 0.15 m tall (a sensible small robot body).
+  -->
+  <xacro:property name="chassis_box_length" value="0.4" />
+  <xacro:property name="chassis_box_width"  value="0.3" />
+  <xacro:property name="chassis_box_height" value="0.15" />
+
+  <!-- ───────────────────────── Wheel geometry ────────────────────────── -->
+  <!--
+    Radius 0.1 m, width 0.05 m – proportionate to the chassis above.
+    The wheel cylinder is rotated 90° about X so the rolling axis is Y.
+    wheel_p = pi/2 for that orientation.
+  -->
+  <xacro:property name="wheel_cylinder_radius" value="0.1"    />
+  <xacro:property name="wheel_cylinder_height" value="0.05"   />
+
+  <!-- Wheel link local origin (centre of the cylinder geometry) -->
+  <xacro:property name="wheel_x"  value="0.0"    />
+  <xacro:property name="wheel_y"  value="0.0"    />
+  <xacro:property name="wheel_z"  value="0.0"    />
+  <xacro:property name="wheel_r"  value="0.0"    />
+  <xacro:property name="wheel_p"  value="1.5707" />  <!-- 90° – rolling axis becomes Y -->
+  <xacro:property name="wheel_ya" value="0.0"    />
+
+  <!-- ───────────────────────── Chassis link origin ───────────────────── -->
+  <!--
+    The chassis link origin sits at the *centre* of the box.
+    chassis_box_z shifts the visual/collision/inertial block upward by
+    half the box height so that the bottom face of the chassis aligns with
+    the wheel centres (z = 0 in the link frame), letting the wheels touch
+    the ground without the body sinking below it.
+  -->
+  <xacro:property name="chassis_box_x"  value="0.0"   />
+  <xacro:property name="chassis_box_y"  value="0.0"   />
+  <xacro:property name="chassis_box_z"  value="0.075" />  <!-- half of 0.15 m height -->
+  <xacro:property name="chassis_box_r"  value="0.0"   />
+  <xacro:property name="chassis_box_p"  value="0.0"   />
+  <xacro:property name="chassis_box_ya" value="0.0"   />
+
+  <!-- ───────────────────────── Caster geometry ───────────────────────── -->
+  <!--
+    Two passive caster spheres at front and rear of chassis underside.
+    Radius chosen to match the wheel radius so the chassis stays level.
+    z offset = -(half chassis height) so the sphere sits at the bottom face.
+  -->
+  <xacro:property name="chassis_caster_radius" value="0.1" />
+
+  <!-- Front caster (positive X) -->
+  <xacro:property name="chassis_caster_x"   value="0.15"  />
+  <xacro:property name="chassis_caster_y"   value="0.0"   />
+  <xacro:property name="chassis_caster_z"   value="0.0"   />
+  <xacro:property name="chassis_caster_r"   value="0.0"   />
+  <xacro:property name="chassis_caster_p"   value="0.0"   />
+  <xacro:property name="chassis_caster_ya"  value="0.0"   />
+
+  <!-- Rear caster (negative X) -->
+  <xacro:property name="chassis_caster2_x"  value="-0.15" />
+  <xacro:property name="chassis_caster2_y"  value="0.0"   />
+  <xacro:property name="chassis_caster2_z"  value="0.0"   />
+  <xacro:property name="chassis_caster2_r"  value="0.0"   />
+  <xacro:property name="chassis_caster2_p"  value="0.0"   />
+  <xacro:property name="chassis_caster2_ya" value="0.0"   />
+
+  <!-- ───────────────────────── Wheel joint positions ─────────────────── -->
+  <!--
+    Joints are expressed relative to the chassis link origin.
+    Left wheel is at -Y, right wheel at +Y; both at z = 0 (wheel-centre
+    height) and x = 0 (mid-body, fine for a diff-drive).
+    Separation = 0.4 m total (right_y - left_y = 0.2 - (-0.2)).
+  -->
+  <xacro:property name="right_wheel_x" value="0.0"   />
+  <xacro:property name="right_wheel_y" value="0.20"  />
+  <xacro:property name="right_wheel_z" value="0.0"   />
+
+  <xacro:property name="left_wheel_x"  value="0.0"   />
+  <xacro:property name="left_wheel_y"  value="-0.20" />
+  <xacro:property name="left_wheel_z"  value="0.0"   />
+
+</robot>

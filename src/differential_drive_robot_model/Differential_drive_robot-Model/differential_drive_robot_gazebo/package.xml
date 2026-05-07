@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>differential_drive_robot_gazebo</name>
+  <version>0.0.0</version>
+  <description>
+    Gazebo Classic launch files and world files for the differential-drive robot.
+    Targets ROS 2 Humble + Gazebo Classic 11 (gazebo_ros_pkgs).
+  </description>
+
+  <maintainer email="todo@todo.todo">todo</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>differential_drive_robot_description</exec_depend>
+  <!-- gazebo_ros provides gzserver, gzclient, spawn_entity and
+       libgazebo_ros_diff_drive.so for Gazebo Classic 11 -->
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>gazebo_plugins</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
